@@ -1,0 +1,168 @@
+# ============================
+# Traefik Production Settings
+# ============================
+
+deployment:
+  replicas: 1
+podSecurityContext:
+  fsGroup: 65534
+#service:
+#  type: LoadBalancer
+
+# ----------------------------
+# EntryPoints / Ports
+# ----------------------------
+ports:
+  web:
+    port: 80
+    expose:
+      default: true
+    protocol: TCP
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          # Only redirect non-ACME requests
+          regex: "^(?!/\\.well-known/acme-challenge/).*"
+
+  websecure:
+    port: 443
+    expose:
+      default: true
+    protocol: TCP
+    tls:
+      enabled: true
+
+  tcp-postgres:
+    # If you need to access Postgres databsase from outside the cluster,
+    port: 5432
+    expose:
+      default: true
+    protocol: TCP
+# ----------------------------
+# Providers
+# ----------------------------
+providers:
+  kubernetesIngress:
+    enabled: true
+  kubernetesGateway:
+    enabled: false
+  kubernetesCRD:
+    enabled: true
+    # allowCrossNamespace: true
+
+    # ----------------------------
+    # Disable Public Dashboard
+    # # ----------------------------
+    # ingressRoute:
+    #   dashboard:
+    #     enabled: false
+
+    # ----------------------------
+    # Let's Encrypt ACME
+    # ----------------------------
+additionalArguments:
+- "--certificatesresolvers.le.acme.email=admin@ornl.gov"
+- "--certificatesresolvers.le.acme.storage=/data/acme.json"
+- "--certificatesresolvers.le.acme.httpchallenge=true"
+- "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+
+# ----------------------------
+# Persistent Certificate Storage
+# ----------------------------
+persistence:
+  enabled: true
+  path: /data
+  size: 1Gi
+  accessMode: ReadWriteMany # safer unless your storage supports RWX
+
+# ----------------------------
+# Logging
+# ----------------------------
+logs:
+  general:
+    level: INFO
+  access:
+    enabled: true
+
+# ----------------------------
+# Metrics (Prometheus)
+# ----------------------------
+metrics:
+  prometheus:
+    enabled: true
+
+# ----------------------------
+# Resources
+# ----------------------------
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+# ----------------------------
+# If you need to access Traefik dashboard,
+# uncomment the following lines.
+# ----------------------------
+api:
+  dashboard: true # enables dashboard internally
+
+extraObjects:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: dashboard-auth-secret
+    namespace: traefik
+  type: kubernetes.io/basic-auth
+  stringData:
+    username: admin
+    password: "P@ssw0rd"
+
+- apiVersion: traefik.io/v1alpha1
+  kind: Middleware
+  metadata:
+    name: dashboard-auth
+    namespace: traefik
+  spec:
+    basicAuth:
+      secret: dashboard-auth-secret
+
+ingressRoute:
+  dashboard:
+    enable: true
+    annotations:
+      traefik.ingress.kubernetes.io/router.tls.certresolver: le
+    enabled: true
+    matchRule: Host(`dashboard.anaeleboo.com`)
+    entryPoints:
+    - websecure
+    middlewares:
+    - name: dashboard-auth
+    tls:
+      certResolver: le
+
+# ----------------------------
+# If you need to access Postgres databsase from outside the cluster,
+# uncomment the following lines.
+# ----------------------------
+# ----------------------------
+# TCP Services (PostgreSQL)
+# ----------------------------
+tcp:
+  routers:
+    postgres-router:
+      entryPoints:
+      - tcp-postgres
+      rule: "HostSNI(`*`)"
+      service: postgres-service
+      tls:
+        passthrough: true
+
+  services:
+    postgres-service:
+      loadBalancer:
+        servers:
+        - address: postgres.postgres.svc.cluster.local:5432

@@ -1,0 +1,105 @@
+# =====================================================
+# Traefik Example: whoami3 Service with Middleware + ACME
+# =====================================================
+
+# ----------------------------
+# Deployment: whoami3
+# ----------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami3
+  namespace: anael
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whoami3
+  template:
+    metadata:
+      labels:
+        app: whoami3
+    spec:
+      containers:
+      - name: whoami3
+        image: traefik/whoami
+        ports:
+        - containerPort: 80
+---
+# ----------------------------
+# Service: whoami3
+# ----------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami3
+  namespace: anael
+spec:
+  selector:
+    app: whoami3
+  ports:
+  - protocol: TCP
+    port: 8080 # Service port inside cluster
+    targetPort: 80 # Container port
+  type: ClusterIP
+---
+# ----------------------------
+# Middleware: Basic Auth
+# ----------------------------
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: whoami3-auth
+  namespace: anael
+spec:
+  basicAuth:
+    secret: whoami3-auth-secret
+---
+# Secret for Basic Auth
+apiVersion: v1
+kind: Secret
+metadata:
+  name: whoami3-auth-secret
+  namespace: anael
+type: kubernetes.io/basic-auth
+stringData:
+  username: user
+  password: "P@ssw0rd"
+---
+# ----------------------------
+# Middleware: HTTP → HTTPS redirect (excluding ACME)
+# ----------------------------
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-to-https
+  namespace: anael
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+    # regex: "^(?!/\\.well-known/acme-challenge/).*"
+---
+# ----------------------------
+# IngressRoute: whoami3
+# ----------------------------
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami3-ingressroute
+  namespace: anael
+spec:
+  entryPoints:
+  - web # HTTP entryPoint
+  - websecure # HTTPS entryPoint
+  routes:
+  - match: Host(`whoami3.anaeleboo.com`) && PathPrefix(`/`)
+    kind: Rule
+    services:
+    - name: whoami3
+      port: 8080
+    middlewares:
+    - name: whoami3-auth # basic auth
+    - name: redirect-to-https # redirect HTTP → HTTPS
+  tls:
+    certResolver: le
