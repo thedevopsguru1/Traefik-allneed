@@ -1,0 +1,13 @@
+apiVersion: traefik.io/v1alpha1
+kind: MiddlewareTCP
+metadata:
+  name: postgres-ip-whitelist
+  namespace: db
+spec:
+  ipAllowList:
+    sourceRange:
+    #   - "57.132.147.228/32"   # Your laptop IP
+    #   - "162.120.185.242/32"
+      - "198.58.124.0/24"   # Optional office/network range
+      - "45.79.28.143/32"  #Laod balancer IP
+      - "10.0.0.0/8"  # Internal k8s network range
