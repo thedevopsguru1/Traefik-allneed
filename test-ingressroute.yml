@@ -48,4 +48,17 @@ spec:
     - name: whoami2
       port: 8080
   tls:
-    certResolver: le
+    secretName: whoami2-anaeleboo-com-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: whoami2-anaeleboo-cert
+  namespace: anael
+spec:
+  secretName: whoami2-anaeleboo-com-tls # same as IngressRoute tls.secretName
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - whoami2.anaeleboo.com

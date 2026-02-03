@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dashboard-cert
+  namespace: traefik
+spec:
+  secretName: dashboard-anaeleboo-com-tls # this secret will hold the TLS cert
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - dashboard.anaeleboo.com

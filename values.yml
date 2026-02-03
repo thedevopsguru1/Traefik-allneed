@@ -13,26 +13,34 @@ podSecurityContext:
 # EntryPoints / Ports
 # ----------------------------
 ports:
+
   web:
     port: 80
     expose:
       default: true
     protocol: TCP
     http:
-      redirections:
-        entryPoint:
-          to: websecure
-          scheme: https
-          # Only redirect non-ACME requests
-          regex: "^(?!/\\.well-known/acme-challenge/).*"
+      redirections: {}
+  web2:
+    port: 8000
+    expose:
+      default: true
+    protocol: TCP
+    http:
+      redirections: {}
+  web3:
+    port: 8443
+    expose:
+      default: true
+    protocol: TCP
 
   websecure:
     port: 443
     expose:
       default: true
     protocol: TCP
-    tls:
-      enabled: true
+    # tls:
+    #   enabled: true
 
   tcp-postgres:
     # If you need to access Postgres databsase from outside the cluster,
@@ -47,34 +55,18 @@ providers:
   kubernetesIngress:
     enabled: true
   kubernetesGateway:
-    enabled: false
+    enabled: true
+
   kubernetesCRD:
     enabled: true
-    # allowCrossNamespace: true
-
+    allowCrossNamespace: true
     # ----------------------------
-    # Disable Public Dashboard
-    # # ----------------------------
-    # ingressRoute:
-    #   dashboard:
-    #     enabled: false
-
+    # Persistent Certificate Storage
     # ----------------------------
-    # Let's Encrypt ACME
-    # ----------------------------
-additionalArguments:
-- "--certificatesresolvers.le.acme.email=admin@ornl.gov"
-- "--certificatesresolvers.le.acme.storage=/data/acme.json"
-- "--certificatesresolvers.le.acme.httpchallenge=true"
-- "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
-
-# ----------------------------
-# Persistent Certificate Storage
-# ----------------------------
 persistence:
   enabled: true
   path: /data
-  size: 1Gi
+  size: 10Gi
   accessMode: ReadWriteMany # safer unless your storage supports RWX
 
 # ----------------------------
@@ -132,9 +124,6 @@ extraObjects:
 
 ingressRoute:
   dashboard:
-    enable: true
-    annotations:
-      traefik.ingress.kubernetes.io/router.tls.certresolver: le
     enabled: true
     matchRule: Host(`dashboard.anaeleboo.com`)
     entryPoints:
@@ -142,27 +131,7 @@ ingressRoute:
     middlewares:
     - name: dashboard-auth
     tls:
-      certResolver: le
+      secretName: dashboard-anaeleboo-com-tls
 
-# ----------------------------
-# If you need to access Postgres databsase from outside the cluster,
-# uncomment the following lines.
-# ----------------------------
-# ----------------------------
-# TCP Services (PostgreSQL)
-# ----------------------------
-tcp:
-  routers:
-    postgres-router:
-      entryPoints:
-      - tcp-postgres
-      rule: "HostSNI(`*`)"
-      service: postgres-service
-      tls:
-        passthrough: true
-
-  services:
-    postgres-service:
-      loadBalancer:
-        servers:
-        - address: postgres.postgres.svc.cluster.local:5432
+gateway:
+  enabled: true

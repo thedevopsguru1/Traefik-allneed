@@ -7,7 +7,7 @@ spec:
   entryPoints:
     - tcp-postgres
   routes:
-    - match: HostSNI(`*`)
+    - match: HostSNI(`db.anaeleboo.com`)
       middlewares:
         - name: postgres-ip-whitelist
           namespace: db

@@ -1,0 +1,5 @@
+additionalArguments:
+- "--certificatesresolvers.le.acme.email=admin@ornl.gov"
+- "--certificatesresolvers.le.acme.storage=/data/acme.json"
+- "--certificatesresolvers.le.acme.httpchallenge=true"
+- "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"

@@ -40,8 +40,10 @@ metadata:
   namespace: anael
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
 spec:
+  ingressClassName: traefik
   rules:
   - host: whoami.anaeleboo.com
     http:
@@ -53,3 +55,7 @@ spec:
             name: whoami
             port:
               number: 8080
+  tls:
+  - hosts:
+    - whoami.anaeleboo.com
+    secretName: whoami-anaeleboo-com-tls

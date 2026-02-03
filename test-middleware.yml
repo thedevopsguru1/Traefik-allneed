@@ -102,4 +102,17 @@ spec:
     - name: whoami3-auth # basic auth
     - name: redirect-to-https # redirect HTTP → HTTPS
   tls:
-    certResolver: le
+    secretName: whoami3-anaeleboo-com-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: whoami3-anaeleboo-cert
+  namespace: anael
+spec:
+  secretName: whoami3-anaeleboo-com-tls # same as IngressRoute tls.secretName
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - whoami3.anaeleboo.com
